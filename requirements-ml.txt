@@ -1,0 +1,13 @@
+# Heavier ML/NLP dependencies used by the embedding, clustering,
+# summarization and classification stages. Installed separately from
+# requirements.txt so the API/DB layer can run without a GPU-capable
+# environment (see SRS 3.6.3 - training separated from inference).
+scikit-learn==1.5.2
+torch==2.4.1
+transformers==4.45.1
+spacy==3.7.6
+hdbscan==0.8.38.post2
+python-igraph==0.11.6
+leidenalg==0.10.2
+mlflow==2.16.2
+pandas==2.2.3
