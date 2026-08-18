@@ -1,14 +1,18 @@
 # backend
 
-Backend for the Bias-Aware Sinhala News Aggregation Platform (Newslens). Implements the data,
-processing, model and API layers described in the project SRS: Sinhala news collection,
-event clustering, event summarization, bias classification and reporting-difference analysis,
-exposed over a versioned REST API.
+API layer for the Bias-Aware Sinhala News Aggregation Platform (Newslens). Batch
+scraping/cleaning/embedding/bias-classification/clustering is owned by the separate
+[Data-Pipeline](https://github.com/Newslens-lk/Data-Pipeline) repo (Airflow-orchestrated,
+writes to a shared `news_pipeline` Postgres+pgvector database). This repo is the "on-demand"
+API layer that Data-Pipeline's own README calls out as *not* part of the batch pipeline: it
+serves articles/events read from that shared database, and (going forward) computes
+summarization/topic-tagging and ad-hoc bias prediction on demand.
 
 ## Stack
 
 - **API**: FastAPI (Python 3.11+)
-- **Database**: PostgreSQL 14+ with `pgvector`
+- **Database**: PostgreSQL 14+ with `pgvector` — the same `news_pipeline` database
+  Data-Pipeline's loader writes to
 - **Cache / rate limiting**: Redis
 - **ML**: scikit-learn, PyTorch, Transformers, spaCy, HDBSCAN + Leiden, MLflow (see `requirements-ml.txt`)
 - **Migrations**: Alembic
@@ -18,13 +22,17 @@ exposed over a versioned REST API.
 ```
 app/
   api/v1/          REST endpoints (health, articles, events, predict)
-  collection/       Scraping + external dataset ingestion (FR1.1)
+  collection/       Scraping + external dataset ingestion (superseded by Data-Pipeline; stub)
   preprocessing/     Cleaning / normalisation
-  embedding/         LASER3 sentence embeddings (FR1.3)
-  clustering/         HDBSCAN + Leiden event clustering (FR1.3)
-  summarization/      Multi-document event summaries (FR1.4)
-  classification/      Bias classifier training + inference (FR1.5)
-  models/           SQLAlchemy ORM models (matches SRS 3.10 schema)
+  embedding/         LASER3 sentence embeddings (superseded by Data-Pipeline; stub)
+  clustering/         HDBSCAN + Leiden event clustering (superseded by Data-Pipeline; stub)
+  summarization/      On-demand multi-document event summaries (FR1.4) - this API's job
+  classification/      On-demand ad-hoc bias prediction (FR1.5) - this API's job
+  models/           SQLAlchemy ORM models
+                      - Source/Article/Event mirror Data-Pipeline's news_pipeline schema
+                        (include/db/models.py); this repo does not own their migration in
+                        shared deployments (see alembic/versions/0001)
+                      - Annotation/OutletStats are owned by this backend
   schemas/          Pydantic request/response models
   db/               Engine/session setup
   core/             Settings, rate limiting
@@ -32,11 +40,19 @@ alembic/            Database migrations
 tests/
 ```
 
-The `collection`, `embedding`, `clustering`, `summarization` and `classification` modules are
-currently stubs (`NotImplementedError`) marking where each pipeline stage needs to be built out;
-the API, database schema, and request/response contracts around them are functional.
+`collection`, `embedding` and `clustering` are stubs kept only as a historical marker of the
+SRS pipeline stages — that logic now lives in Data-Pipeline. `summarization` and
+`classification` are still stubs (`NotImplementedError`) but are in scope for this repo, since
+Data-Pipeline's README explicitly defers summarization/topic-tagging and ad-hoc prediction to
+an API layer rather than the batch pipeline.
 
 ## Getting started
+
+`docker-compose.yml` here spins up its own standalone Postgres for local dev/CI (migration
+0001 creates the full `sources`/`articles`/`events` schema, guarded with `IF NOT EXISTS` so it's
+also safe to run against Data-Pipeline's real `news_pipeline` database, where those tables
+already exist). To connect to the actual shared pipeline database instead, point `DATABASE_URL`
+at Data-Pipeline's `news-db` service.
 
 1. Copy the environment template and adjust as needed:
    ```

@@ -10,8 +10,8 @@ class Annotation(Base):
     __tablename__ = "annotations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    article_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("articles.id", ondelete="CASCADE"), index=True
+    article_id: Mapped[str] = mapped_column(
+        String, ForeignKey("articles.article_id", ondelete="CASCADE"), index=True
     )
     annotator_id: Mapped[str] = mapped_column(String(100))
 
